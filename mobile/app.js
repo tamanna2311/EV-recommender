@@ -270,6 +270,8 @@ const renderDetection = (data) => {
   detectResults.innerHTML = "";
   const card = document.createElement("article");
   card.className = "result-card";
+  const windowsUsed = data.features?.windows_used ?? data.windows_used ?? 0;
+  const durationSeconds = data.duration_seconds ?? 0;
 
   const title = document.createElement("h2");
   title.textContent = data.label || "Detection result";
@@ -277,10 +279,13 @@ const renderDetection = (data) => {
   const meta = document.createElement("p");
   meta.className = "reason";
   const confidence = typeof data.confidence === "number" ? `${Math.round(data.confidence * 100)}% confidence` : "Confidence unavailable";
-  meta.textContent = `${confidence}. ${data.windows_used || 0} windows used from ${data.duration_seconds || 0} seconds.`;
+  const evProbability = typeof data.ev_probability === "number"
+    ? ` EV probability: ${Math.round(data.ev_probability * 100)}%.`
+    : "";
+  meta.textContent = `${confidence}. ${windowsUsed} windows used from ${durationSeconds} seconds.${evProbability}`;
 
   const status = document.createElement("p");
-  status.className = "drawbacks";
+  status.className = data.model_status === "trained_model" ? "reason" : "drawbacks";
   status.textContent = data.model_status === "trained_model"
     ? "Prediction used the trained detector model."
     : "Prediction used the fallback detector because no trained model file is deployed yet.";
