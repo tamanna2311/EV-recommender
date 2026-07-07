@@ -24,14 +24,15 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
 .app-shell {
   width: min(100%, 720px);
   margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+  padding: max(18px, env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom));
 }
 
 .top-panel {
@@ -57,16 +58,24 @@ h1 {
   line-height: 0.95;
 }
 
+.app-view {
+  display: none;
+}
+
+.app-view.active {
+  display: block;
+}
+
 .install-button,
 .primary-button,
 .secondary-button {
-  border: 0;
   border-radius: 8px;
   font-weight: 800;
 }
 
 .install-button,
 .primary-button {
+  border: 0;
   background: var(--accent);
   color: #fff;
 }
@@ -86,14 +95,17 @@ h1 {
 
 .preference-form,
 .result-card,
-.news-card {
+.news-card,
+.detect-panel,
+.share-form {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   box-shadow: 0 14px 42px rgba(12, 22, 36, 0.08);
 }
 
-.preference-form {
+.preference-form,
+.share-form {
   display: grid;
   gap: 15px;
   padding: 16px;
@@ -121,14 +133,26 @@ output {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
-  min-height: 46px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
   padding: 0 12px;
+}
+
+input,
+select {
+  min-height: 46px;
+}
+
+textarea {
+  min-height: 180px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.45;
 }
 
 input[type="range"] {
@@ -138,17 +162,22 @@ input[type="range"] {
 }
 
 .grid,
-.toggle-grid {
+.toggle-grid,
+.capture-actions,
+.status-grid {
   display: grid;
   gap: 12px;
 }
 
-.two {
+.two,
+.toggle-grid,
+.capture-actions,
+.status-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.toggle-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.capture-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .toggle {
@@ -174,16 +203,19 @@ input[type="range"] {
 
 .primary-button:disabled,
 .secondary-button:disabled {
-  opacity: 0.65;
+  opacity: 0.55;
 }
 
-.results {
+.results,
+.news-list {
   display: grid;
   gap: 14px;
   padding-top: 16px;
 }
 
-.result-card {
+.result-card,
+.news-card,
+.detect-panel {
   padding: 15px;
 }
 
@@ -227,7 +259,8 @@ h2 {
   margin: 14px 0;
 }
 
-.metrics span {
+.metrics span,
+.status-grid span {
   min-height: 54px;
   border-radius: 8px;
   background: #f0f4f8;
@@ -235,6 +268,16 @@ h2 {
   font-size: 0.78rem;
   font-weight: 850;
   color: var(--ink);
+}
+
+.status-grid span {
+  display: grid;
+  align-content: center;
+  text-align: center;
+}
+
+.status-grid strong {
+  font-size: 1.15rem;
 }
 
 .reason,
@@ -256,25 +299,12 @@ h2 {
   padding: 14px;
 }
 
-.news-section {
-  padding-top: 24px;
-}
-
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 12px;
-}
-
-.news-list {
-  display: grid;
-  gap: 12px;
-}
-
-.news-card {
-  padding: 14px;
 }
 
 .news-card a {
@@ -297,10 +327,72 @@ h2 {
   font-weight: 750;
 }
 
+.record-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.record-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.record-status.recording .record-dot {
+  background: #d92d20;
+}
+
+.detect-panel .status-grid {
+  margin-bottom: 14px;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(16px);
+}
+
+.nav-button {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  min-height: 56px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.nav-button svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.nav-button.active {
+  background: #e4f6f1;
+  color: var(--accent-dark);
+}
+
 @media (max-width: 430px) {
   .two,
   .toggle-grid,
-  .metrics {
+  .metrics,
+  .capture-actions {
     grid-template-columns: 1fr;
   }
 }

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.recommender import get_recommendations
 from src.explanation_generator import generate_explanation
+from src.ev_detector import predict_accelerometer_csv
 
 app = FastAPI(title="EV Car Recommendation API")
 
@@ -153,6 +154,17 @@ def get_news():
     if not news["articles"]:
         raise HTTPException(status_code=503, detail="EV news is temporarily unavailable")
     return news
+
+@app.post("/detect")
+async def detect_ev_from_accelerometer(request: Request):
+    csv_bytes = await request.body()
+    if not csv_bytes:
+        raise HTTPException(status_code=400, detail="Accelerometer CSV is empty")
+
+    try:
+        return predict_accelerometer_csv(csv_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 @app.post("/recommend")
 def recommend_cars(prefs: UserPreferences):

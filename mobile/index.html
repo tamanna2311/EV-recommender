@@ -23,112 +23,114 @@
         <button class="install-button" id="installButton" type="button" hidden>Install</button>
       </section>
 
-      <form class="preference-form" id="preferenceForm">
-        <div class="field-row">
-          <label for="budget">Budget</label>
-          <output id="budgetValue">15 L</output>
-        </div>
-        <input id="budget" name="budget_lakh" type="range" min="5" max="80" step="0.5" value="15" />
+      <section class="app-view active" data-view="explore">
+        <form class="preference-form" id="preferenceForm">
+          <div class="field-row">
+            <label for="budget">Budget</label>
+            <output id="budgetValue">15 L</output>
+          </div>
+          <input id="budget" name="budget_lakh" type="range" min="5" max="80" step="0.5" value="15" />
 
-        <div class="field-row">
-          <label for="range">Minimum range</label>
-          <output id="rangeValue">250 km</output>
-        </div>
-        <input id="range" name="minimum_range_km" type="range" min="100" max="600" step="10" value="250" />
+          <div class="field-row">
+            <label for="range">Minimum range</label>
+            <output id="rangeValue">250 km</output>
+          </div>
+          <input id="range" name="minimum_range_km" type="range" min="100" max="600" step="10" value="250" />
 
-        <div class="grid two">
-          <label>
-            Daily travel
-            <input name="daily_travel_km" type="number" min="1" max="500" value="40" />
-          </label>
-          <label>
-            Family size
-            <input name="family_size" type="number" min="2" max="8" value="4" />
-          </label>
-        </div>
+          <div class="grid two">
+            <label>
+              Daily travel
+              <input name="daily_travel_km" type="number" min="1" max="500" value="40" />
+            </label>
+            <label>
+              Family size
+              <input name="family_size" type="number" min="2" max="8" value="4" />
+            </label>
+          </div>
 
-        <div class="grid two">
-          <label>
-            City
-            <input name="city" type="text" value="Delhi" autocomplete="address-level2" />
-          </label>
-          <label>
-            State
-            <input name="state" type="text" value="Delhi" autocomplete="address-level1" />
-          </label>
-        </div>
+          <div class="grid two">
+            <label>
+              City
+              <input name="city" type="text" value="Delhi" autocomplete="address-level2" />
+            </label>
+            <label>
+              State
+              <input name="state" type="text" value="Delhi" autocomplete="address-level1" />
+            </label>
+          </div>
 
-        <label>
-          Use case
-          <select name="use_case">
-            <option value="daily_city_commute">Daily city commute</option>
-            <option value="family_use">Family use</option>
-            <option value="highway_travel">Highway travel</option>
-            <option value="office_commute">Office commute</option>
-            <option value="budget_friendly">Budget friendly</option>
-            <option value="performance">Performance</option>
-            <option value="premium">Premium</option>
-          </select>
-        </label>
-
-        <div class="grid two">
           <label>
-            Body type
-            <select name="preferred_body_type">
-              <option>Any</option>
-              <option>SUV</option>
-              <option>Hatchback</option>
-              <option>Sedan</option>
-              <option>Crossover</option>
-              <option>Compact SUV</option>
-              <option>Mid-size SUV</option>
+            Use case
+            <select name="use_case">
+              <option value="daily_city_commute">Daily city commute</option>
+              <option value="family_use">Family use</option>
+              <option value="highway_travel">Highway travel</option>
+              <option value="office_commute">Office commute</option>
+              <option value="budget_friendly">Budget friendly</option>
+              <option value="performance">Performance</option>
+              <option value="premium">Premium</option>
             </select>
           </label>
+
+          <div class="grid two">
+            <label>
+              Body type
+              <select name="preferred_body_type">
+                <option>Any</option>
+                <option>SUV</option>
+                <option>Hatchback</option>
+                <option>Sedan</option>
+                <option>Crossover</option>
+                <option>Compact SUV</option>
+                <option>Mid-size SUV</option>
+              </select>
+            </label>
+            <label>
+              Brand
+              <select name="brand_preference">
+                <option>Any</option>
+                <option>Tata</option>
+                <option>MG</option>
+                <option>Mahindra</option>
+                <option>Hyundai</option>
+                <option>Kia</option>
+                <option>BYD</option>
+                <option>Citroen</option>
+              </select>
+            </label>
+          </div>
+
           <label>
-            Brand
-            <select name="brand_preference">
-              <option>Any</option>
-              <option>Tata</option>
-              <option>MG</option>
-              <option>Mahindra</option>
-              <option>Hyundai</option>
-              <option>Kia</option>
-              <option>BYD</option>
-              <option>Citroen</option>
+            Priority
+            <select name="priority">
+              <option value="balanced">Balanced</option>
+              <option value="lowest_price">Lowest price</option>
+              <option value="maximum_range">Maximum range</option>
+              <option value="fast_charging">Fast charging</option>
+              <option value="family_comfort">Family comfort</option>
+              <option value="safety">Safety</option>
+              <option value="performance">Performance</option>
             </select>
           </label>
-        </div>
 
-        <label>
-          Priority
-          <select name="priority">
-            <option value="balanced">Balanced</option>
-            <option value="lowest_price">Lowest price</option>
-            <option value="maximum_range">Maximum range</option>
-            <option value="fast_charging">Fast charging</option>
-            <option value="family_comfort">Family comfort</option>
-            <option value="safety">Safety</option>
-            <option value="performance">Performance</option>
-          </select>
-        </label>
+          <div class="toggle-grid">
+            <label class="toggle">
+              <input name="home_charging_available" type="checkbox" checked />
+              <span>Home charging</span>
+            </label>
+            <label class="toggle">
+              <input name="fast_charging_needed" type="checkbox" checked />
+              <span>Fast charging</span>
+            </label>
+          </div>
 
-        <div class="toggle-grid">
-          <label class="toggle">
-            <input name="home_charging_available" type="checkbox" checked />
-            <span>Home charging</span>
-          </label>
-          <label class="toggle">
-            <input name="fast_charging_needed" type="checkbox" checked />
-            <span>Fast charging</span>
-          </label>
-        </div>
+          <button class="primary-button" type="submit">Find my EV</button>
+        </form>
 
-        <button class="primary-button" type="submit">Find my EV</button>
-      </form>
+        <section class="results" id="results" aria-live="polite"></section>
+      </section>
 
-      <section class="results" id="results" aria-live="polite"></section>
-
-      <section class="news-section">
+      <section class="app-view" data-view="news">
         <div class="section-head">
           <div>
             <p class="eyebrow">EV news</p>
@@ -138,7 +140,81 @@
         </div>
         <div class="news-list" id="newsList" aria-live="polite"></div>
       </section>
+
+      <section class="app-view" data-view="detect">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">EV detector</p>
+            <h2 class="section-title">Detect ride type</h2>
+          </div>
+        </div>
+
+        <div class="detect-panel">
+          <div class="record-status" id="recordStatus">
+            <span class="record-dot"></span>
+            <strong id="recordState">Ready</strong>
+          </div>
+
+          <div class="status-grid">
+            <span><strong id="sampleCount">0</strong> samples</span>
+            <span><strong id="captureDuration">0.0</strong> sec</span>
+          </div>
+
+          <div class="capture-actions">
+            <button class="primary-button" id="startCapture" type="button">Start</button>
+            <button class="secondary-button" id="stopCapture" type="button" disabled>Stop</button>
+            <button class="secondary-button" id="sendCapture" type="button" disabled>Send</button>
+          </div>
+        </div>
+
+        <section class="results" id="detectResults" aria-live="polite"></section>
+      </section>
+
+      <section class="app-view" data-view="share">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Share</p>
+            <h2 class="section-title">Views and blog</h2>
+          </div>
+        </div>
+
+        <form class="share-form" id="shareForm">
+          <label>
+            Title
+            <input id="shareTitle" type="text" value="My EV buying notes" />
+          </label>
+          <label>
+            Write
+            <textarea id="shareText" rows="8">I used EV Finder to compare electric cars and follow EV news.</textarea>
+          </label>
+          <div class="capture-actions">
+            <button class="primary-button" id="sharePost" type="button">Share</button>
+            <button class="secondary-button" id="copyPost" type="button">Copy</button>
+          </div>
+        </form>
+
+        <section class="results" id="shareStatus" aria-live="polite"></section>
+      </section>
     </main>
+
+    <nav class="bottom-nav" aria-label="Main">
+      <button class="nav-button active" type="button" data-target="explore">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20a9 9 0 1 1 6.36-2.64l3.14 3.14-1.5 1.5-3.14-3.14A8.96 8.96 0 0 1 11 20Zm0-2a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z"/></svg>
+        <span>Explore</span>
+      </button>
+      <button class="nav-button" type="button" data-target="news">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v13H6a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2Zm0 12a1 1 0 0 0 1 1h11V6H5v10Zm2-8h8v2H7V8Zm0 4h8v2H7v-2Z"/></svg>
+        <span>News</span>
+      </button>
+      <button class="nav-button" type="button" data-target="detect">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3v3h4l-5 7V9H8l5-6ZM5 14h14v6H5v-6Zm2 2v2h10v-2H7Z"/></svg>
+        <span>Detect</span>
+      </button>
+      <button class="nav-button" type="button" data-target="share">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.1c-.76 0-1.44.3-1.96.77L8.91 12.7a3.2 3.2 0 0 0 0-1.4l7.05-4.12A3 3 0 1 0 15 5a3.2 3.2 0 0 0 .04.49L7.99 9.61a3 3 0 1 0 0 4.78l7.12 4.18A3 3 0 1 0 18 16.1Z"/></svg>
+        <span>Share</span>
+      </button>
+    </nav>
 
     <template id="resultTemplate">
       <article class="result-card">
