@@ -1,5 +1,10 @@
 # EV Finder
 
+Frontend : https://ev-recommender-frontend-lo29.onrender.com
+can install app on phone using frontend link 
+
+Backend : https://ev-recommender-64pm.onrender.com/docs
+
 EV Finder recommends electric cars for the Indian market using a hybrid of market popularity, user behavior, and explicit preference scoring.
 
 ## What the App Does
