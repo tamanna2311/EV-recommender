@@ -1,56 +1,64 @@
-# How to Run the EV Recommendation System
+# How to Run EV Finder
 
-Follow these steps to run the complete project locally.
+## 1. Install Dependencies
 
-## 1. Environment Setup
-
-Ensure you have Python installed. Navigate to the root directory `ev-car-recommender` and install dependencies:
+Use Python 3.11 or 3.12.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 2. Run Data Pipeline
+## 2. Refresh Data
 
-Generate the raw data, clean it, and run feature engineering:
+The checked-in dataset is already generated. To rebuild it from a market CSV:
 
 ```bash
-# 1. Generate Raw Data
-python src/data_collection.py
-
-# 2. Clean Data (generates data_dictionary.md)
+python scripts/import_market_dataset.py \
+  --source-csv data/market_ev_cars_reference.csv \
+  --sales-csv data/monthly_sales_modelwise_2026_05.csv \
+  --output-dir data
 python src/data_cleaning.py
-
-# 3. Feature Engineering (generates normalized features)
 python src/feature_engineering.py
 ```
 
-*Note: The generated CSV files will be saved in the `data/` directory.*
+To refresh from an online CSV source:
 
-## 3. Run Backend (FastAPI)
+```bash
+python scripts/import_market_dataset.py \
+  --source-url "$EV_MARKET_CSV_URL" \
+  --sales-csv data/monthly_sales_modelwise_2026_05.csv \
+  --output-dir data
+python src/data_cleaning.py
+python src/feature_engineering.py
+```
 
-Start the FastAPI backend server on port 8000:
+## 3. Run Backend
 
 ```bash
 uvicorn backend.main:app --reload
 ```
 
-You can view the API documentation at `http://127.0.0.1:8000/docs`.
+API docs are available at `http://127.0.0.1:8000/docs`.
 
-## 4. Run Frontend (Streamlit)
-
-In a new terminal window, start the Streamlit frontend:
+## 4. Run Mobile/PWA Frontend
 
 ```bash
-streamlit run frontend/app.py
+cd mobile
+python -m http.server 8080
 ```
 
-The web app will automatically open in your default browser at `http://localhost:8501`.
+Open `http://127.0.0.1:8080`.
 
-## 5. Run Tests
+The frontend automatically uses `http://127.0.0.1:8000` when run locally. In production it uses the deployed API URL in `mobile/app.js`.
 
-To evaluate the recommendation engine against the 4 predefined user personas (Budget city, Family, Highway, Premium), run:
+## 5. Optional Streamlit Frontend
 
 ```bash
-pytest tests/test_recommender.py -v
+API_URL=http://127.0.0.1:8000 streamlit run frontend/app.py
+```
+
+## 6. Run Tests
+
+```bash
+python -m pytest tests/test_recommender.py -v
 ```

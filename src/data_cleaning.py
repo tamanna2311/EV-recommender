@@ -34,6 +34,38 @@ def clean_data():
         raise FileNotFoundError(f"{raw_path} not found. Run data_collection.py first.")
         
     df = pd.read_csv(raw_path)
+
+    required_defaults = {
+        'price_ex_showroom_lakh': np.nan,
+        'price_on_road_lakh': np.nan,
+        'min_price_lakh': np.nan,
+        'max_price_lakh': np.nan,
+        'battery_capacity_kwh': np.nan,
+        'claimed_range_km': np.nan,
+        'real_world_range_km': np.nan,
+        'charging_time_ac_hours': np.nan,
+        'charging_time_dc_minutes': np.nan,
+        'fast_charging_available': False,
+        'motor_power_kw': np.nan,
+        'torque_nm': np.nan,
+        'top_speed_kmph': np.nan,
+        'acceleration_0_100_sec': np.nan,
+        'body_type': 'SUV',
+        'segment': 'SUV',
+        'seating_capacity': 5,
+        'boot_space_litres': np.nan,
+        'ground_clearance_mm': np.nan,
+        'safety_rating': np.nan,
+        'airbags': np.nan,
+        'home_charging_supported': True,
+        'sales_latest_month': 0,
+        'sales_previous_month': 0,
+        'sales_3_months_ago': 0,
+        'variants_count': 1,
+    }
+    for column, default in required_defaults.items():
+        if column not in df.columns:
+            df[column] = default
     
     # 1. Clean Prices (Lakh)
     df['price_ex_showroom_lakh'] = df['price_ex_showroom_lakh'].apply(clean_price)
@@ -62,22 +94,43 @@ def clean_data():
         'battery_warranty_km'
     ]
     
-    for col in numeric_cols:
-        df[col] = df[col].apply(clean_numeric)
+    optional_numeric_cols = [
+        'variants_count',
+        'sales_latest_month',
+        'sales_previous_month',
+        'sales_3_months_ago',
+        'user_rating',
+        'rating_count',
+    ]
+
+    for col in numeric_cols + optional_numeric_cols:
+        if col in df.columns:
+            df[col] = df[col].apply(clean_numeric)
         
     # 3. Clean boolean columns
     bool_cols = ['fast_charging_available', 'home_charging_supported']
     for col in bool_cols:
-        df[col] = df[col].apply(clean_boolean)
+        if col in df.columns:
+            df[col] = df[col].apply(clean_boolean)
         
     # 4. Handle Missing Values
     # Assume 0 boot space if missing, average charging time if missing, etc.
-    df['boot_space_litres'].fillna(0, inplace=True)
+    df['boot_space_litres'] = df['boot_space_litres'].fillna(0)
+    df['safety_rating'] = df['safety_rating'].fillna(3.0).clip(0, 5)
+    df['seating_capacity'] = df['seating_capacity'].fillna(5)
+    df['claimed_range_km'] = df['claimed_range_km'].fillna(df['claimed_range_km'].median())
+    df['real_world_range_km'] = df['real_world_range_km'].fillna(df['claimed_range_km'] * 0.78)
+    df['battery_capacity_kwh'] = df['battery_capacity_kwh'].fillna(df['battery_capacity_kwh'].median())
+    df['motor_power_kw'] = df['motor_power_kw'].fillna(df['motor_power_kw'].median())
+    df['acceleration_0_100_sec'] = df['acceleration_0_100_sec'].fillna(15)
     
     # For DC charging time, if missing, we can estimate or put a high value (like 120 mins) 
     # to penalize it in feature engineering, but we'll leave as NaN and handle in feature engineering
     # or fill with median.
-    df['charging_time_dc_minutes'].fillna(df['charging_time_dc_minutes'].median(), inplace=True)
+    dc_median = df['charging_time_dc_minutes'].median()
+    if np.isnan(dc_median):
+        dc_median = 120
+    df['charging_time_dc_minutes'] = df['charging_time_dc_minutes'].fillna(dc_median)
     
     # Calculate some rough suitability scores out of 10 for the requirements
     # (These will be further refined in feature_engineering, but good to have base scores)
@@ -129,6 +182,22 @@ def generate_data_dictionary():
 | cons | String | Disadvantages and drawbacks of the car |
 | source_url | String | URL of the data source |
 | last_updated | String | Date of last data update |
+| status | String | Market availability status |
+| price_text | String | Human-readable source price range |
+| range_text | String | Human-readable source range |
+| battery_text | String | Human-readable source battery range |
+| charging_text | String | Charging text from source data |
+| useful_features | String | Extracted feature highlights from source data |
+| variants_count | Float | Number of variants listed by the source |
+| image_url | String | Model image URL used by mobile cards |
+| image_source_url | String | Source page for the image |
+| data_source | String | Name of the source used for this row |
+| data_collected_date | String | Date the source row was collected |
+| sales_latest_month | Float | Latest model-wise monthly sales, when known |
+| sales_previous_month | Float | Previous monthly sales, when known |
+| sales_3_months_ago | Float | Sales from three months ago, when known |
+| sales_data_month | String | Month represented by sales_latest_month |
+| sales_source | String | Source note for the sales data |
 """
     with open('data/data_dictionary.md', 'w') as f:
         f.write(dict_content)

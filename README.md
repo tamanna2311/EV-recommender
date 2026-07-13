@@ -1,54 +1,83 @@
-# EV Car Recommendation System
+# EV Finder
 
-## Project Title
-Electric Vehicle (EV) Recommendation System for the Indian Market.
+EV Finder recommends electric cars for the Indian market using a hybrid of market popularity, user behavior, and explicit preference scoring.
 
-## Problem Statement
-Buying an electric vehicle can be overwhelming due to varying prices, ranges, charging infrastructure, and personal use cases. Users often don't know which car fits their exact needs. This project builds a recommendation system that takes user preferences (budget, range, use-case, family size, etc.) and suggests the top 5 EVs tailored to them, complete with explanations of why it's a good fit and potential drawbacks.
+## What the App Does
 
-## Why Content-Based Recommendation?
-Since we do not have historical user behavior data (like user profiles, clicks, past purchases, or ratings), we cannot use Collaborative Filtering in the first version. 
-
-Therefore, we use a **Content-Based and Rule-Based Recommendation Approach**:
-1. **Rule-Based Filtering**: Hard constraints (like a strict budget ceiling or minimum seating capacity) are used to filter out cars that are absolute dealbreakers.
-2. **Content-Based Similarity & Scoring**: Cars are scored based on a combination of their normalized intrinsic features (price, range, battery, performance) matched against user-defined weights (priorities such as `lowest_price` or `maximum_range`).
-
-## Dataset Details
-The system uses a highly accurate, structured dataset of top-selling EVs in the Indian market as of mid-2024. 
-- **Data Sources**: Official websites of Tata Motors, MG Motor India, Hyundai India, BYD India, Mahindra Auto, and Kia India.
-- **Features Used**: Over 35 features are tracked, including:
-  - Numeric: Ex-showroom price, battery capacity, range, charging times, seating capacity, boot space, safety rating, power, torque, etc.
-  - Categorical: Brand, body type, segment, transmission, fast charging availability.
+- Shows pre-search recommendations as soon as the user lands on Explore.
+- Uses cold-start popularity when there is no user history yet.
+- Learns from local browser behavior such as searches and opened car listings.
+- Lets users fine-tune recommendations by budget, range, family size, use case, body type, brand, charging, and priority.
+- Shows image-led car cards with price, range, battery, sales signal, source link, reasons, and drawbacks.
+- Includes EV news, accelerometer-based EV ride detection, and sharing views.
 
 ## Recommendation Logic
-1. **Hard Filters**: Filters out cars above budget or lacking required seats/charging capabilities. Implements filter relaxation if no cars match.
-2. **Scoring**: Calculates normalized feature scores (e.g., `budget_score`, `range_score`, `family_score`). 
-3. **Weighting**: Applies varying weights to these scores based on the user's `priority` selection.
-4. **Explanation**: Analyzes the matched car's features against the user's prompt to generate natural language reasons and drawbacks.
+
+The recommender now has two paths:
+
+1. **Before-search recommendations**
+   - No behavior: ranks cars using sales volume, value-for-money, range, safety, charging, and availability.
+   - With behavior: blends brand, body type, price, range, and viewed-car affinity with market popularity.
+
+2. **Preference search**
+   - Applies budget and seating filters with controlled relaxation.
+   - Scores budget, real-world range, charging, family comfort, performance, safety, value, body type, brand, and use case.
+   - Adds a small popularity signal and optional behavior signal without letting it overpower explicit preferences.
+
+The first behavior store is intentionally local-only through `localStorage`, so the feature works without login. If user accounts are added later, those events can move to a database with the same event shape.
+
+## Dataset
+
+The app uses `data/ev_cars_features.csv`, generated from:
+
+- `data/market_ev_cars_reference.csv`: broad Indian EV model reference data with images and source URLs.
+- `data/monthly_sales_modelwise_2026_05.csv`: model-wise sales signal used for popularity.
+- `scripts/import_market_dataset.py`: imports the market CSV into the canonical schema.
+- `src/data_cleaning.py` and `src/feature_engineering.py`: clean fields and build recommender scores.
+
+The current checked-in market dataset contains 62 EV models.
+
+## Data Refresh
+
+To refresh from a local CSV:
+
+```bash
+python scripts/import_market_dataset.py \
+  --source-csv path/to/indian_ev_cars.csv \
+  --sales-csv data/monthly_sales_modelwise_2026_05.csv \
+  --output-dir data
+python src/data_cleaning.py
+python src/feature_engineering.py
+python -m pytest tests/test_recommender.py -v
+```
+
+For ongoing updates, `.github/workflows/update-ev-data.yml` runs weekly and can pull a maintained CSV from the `EV_MARKET_CSV_URL` repository secret. When the generated data changes, it opens a pull request after tests pass.
 
 ## How to Run
 
-See `run_project.md` for full instructions.
+Install dependencies:
 
-## Example Inputs
-- **Budget**: 25 Lakhs
-- **Min Range**: 350 km
-- **Use Case**: Family Use
-- **Family Size**: 5
-- **Priority**: Family Comfort
+```bash
+pip install -r requirements.txt
+```
 
-## Example Output
-- **#1 - MG ZS EV (85% Match)**
-- **Reason**: MG ZS EV is recommended because it fits comfortably within your budget, meets your minimum range requirement, can easily accommodate your family of 5, supports fast charging as requested, and has a strong 5-star safety rating.
-- **Drawbacks**: However, it may not be ideal for frequent long highway trips.
+Run the FastAPI backend:
 
-## Limitations
-- Operates on a static dataset of current EVs (does not self-update prices).
-- Rule-based scaling requires manual tuning of weights.
+```bash
+uvicorn backend.main:app --reload
+```
 
-## Future Improvements
-- **Add user login**: Allow users to save their profiles.
-- **Store user searches & clicks**: Begin building a dataset of user behavior.
-- **Add collaborative filtering**: Transition to a hybrid model once enough user data is collected.
-- **Location-based charging**: Integrate with APIs to verify if the user's city has adequate fast chargers for their specific brand.
-- **TCO & EMI Calculators**: Add total cost of ownership and EV vs. Petrol savings calculators.
+Run the mobile/PWA frontend from another terminal:
+
+```bash
+cd mobile
+python -m http.server 8080
+```
+
+Open `http://127.0.0.1:8080`.
+
+Run tests:
+
+```bash
+python -m pytest tests/test_recommender.py -v
+```

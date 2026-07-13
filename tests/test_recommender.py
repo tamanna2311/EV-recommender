@@ -6,7 +6,7 @@ import pandas as pd
 # Add backend directory to path to import models
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.main import UserPreferences
-from src.recommender import get_recommendations
+from src.recommender import get_default_recommendations, get_recommendations
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_data():
@@ -106,3 +106,37 @@ def test_premium_user():
     assert len(recs) > 0
     # Ioniq 5 or EV6 or BYD Atto 3
     assert recs.iloc[0]['price_on_road_lakh'] > 30.0
+
+
+def test_cold_start_recommendations_use_market_popularity():
+    recs = get_default_recommendations(limit=6)
+
+    assert len(recs) == 6
+    assert recs.iloc[0]['popularity_score'] > 0
+    assert recs.iloc[0]['price_on_road_lakh'] <= 80
+
+
+def test_behavior_recommendations_shift_toward_user_affinity():
+    events = [
+        {
+            "type": "search",
+            "budget_lakh": 18,
+            "minimum_range_km": 300,
+            "preferred_body_type": "SUV",
+            "brand_preference": "MG",
+            "weight": 1.4,
+        },
+        {
+            "type": "open_source",
+            "car_id": "mg_windsor_ev",
+            "brand": "MG",
+            "body_type": "MUV/MPV",
+            "budget_lakh": 12.04,
+            "minimum_range_km": 350,
+            "weight": 1.6,
+        },
+    ]
+    recs = get_default_recommendations(events, limit=3)
+
+    assert len(recs) == 3
+    assert "MG" in recs["brand"].head(2).tolist()

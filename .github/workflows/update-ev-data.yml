@@ -1,0 +1,48 @@
+name: Update EV market data
+
+on:
+  schedule:
+    - cron: "30 2 * * 1"
+  workflow_dispatch:
+
+jobs:
+  refresh-data:
+    runs-on: ubuntu-latest
+    env:
+      EV_MARKET_CSV_URL: ${{ secrets.EV_MARKET_CSV_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Refresh recommendation dataset
+        run: |
+          if [ -n "$EV_MARKET_CSV_URL" ]; then
+            python scripts/import_market_dataset.py \
+              --source-url "$EV_MARKET_CSV_URL" \
+              --sales-csv data/monthly_sales_modelwise_2026_05.csv \
+              --output-dir data
+          else
+            python scripts/import_market_dataset.py \
+              --source-csv data/market_ev_cars_reference.csv \
+              --sales-csv data/monthly_sales_modelwise_2026_05.csv \
+              --output-dir data
+          fi
+          python src/data_cleaning.py
+          python src/feature_engineering.py
+
+      - name: Test recommender
+        run: python -m pytest tests/test_recommender.py -v
+
+      - name: Open pull request if data changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/update-ev-market-data
+          commit-message: "Update EV market recommendation data"
+          title: "Update EV market recommendation data"
+          body: "Automated EV dataset refresh from the configured market CSV source."

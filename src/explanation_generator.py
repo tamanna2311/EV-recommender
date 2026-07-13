@@ -65,3 +65,40 @@ def generate_explanation(car, prefs, match_percentage):
         drawback_text = "It perfectly matches most of your core requirements."
         
     return reason_text, drawback_text
+
+
+def _safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def generate_market_explanation(car, personalized=False):
+    reasons = []
+    sales = _safe_float(car.get('sales_latest_month'))
+    real_range = _safe_float(car.get('real_world_range_km'))
+    price = _safe_float(car.get('price_on_road_lakh'))
+
+    if sales > 0:
+        reasons.append(f"{int(sales):,} recent monthly sales")
+    if _safe_float(car.get('value_for_money_score')) >= 0.65:
+        reasons.append("strong value for the price")
+    if real_range >= 350:
+        reasons.append(f"about {int(real_range)} km estimated real-world range")
+    if _safe_float(car.get('safety_rating'), 3) >= 5:
+        reasons.append("a 5-star safety rating")
+    if car.get('fast_charging_available') in [True, 'True', 'true', 'Yes', 'yes']:
+        reasons.append("fast-charging support")
+
+    if personalized:
+        prefix = "Recommended from your recent browsing"
+    else:
+        prefix = "Popular starting point"
+
+    if not reasons:
+        return f"{prefix} based on current market availability.", ""
+
+    first_reasons = ", ".join(reasons[:3])
+    price_text = f" Starts around Rs {price:.2f} lakh." if price else ""
+    return f"{prefix}: {first_reasons}.{price_text}", ""

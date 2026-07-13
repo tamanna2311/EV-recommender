@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote
@@ -13,8 +13,8 @@ import os
 # Add src to path to import modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.recommender import get_recommendations
-from src.explanation_generator import generate_explanation
+from src.recommender import get_default_recommendations, get_recommendations, load_feature_data
+from src.explanation_generator import generate_explanation, generate_market_explanation
 from src.ev_detector import predict_accelerometer_csv
 
 app = FastAPI(title="EV Car Recommendation API")
@@ -26,6 +26,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def add_private_network_cors_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
 NEWS_QUERIES = [
     "electric vehicles India",
     "EV charging India",
@@ -36,6 +43,24 @@ NEWS_CACHE = {
     "expires_at": datetime.min.replace(tzinfo=timezone.utc),
     "payload": None,
 }
+
+class BehaviorEvent(BaseModel):
+    type: str = "view"
+    car_id: str | None = None
+    brand: str | None = None
+    body_type: str | None = None
+    budget_lakh: float | None = None
+    minimum_range_km: float | None = None
+    preferred_body_type: str | None = None
+    brand_preference: str | None = None
+    weight: float = 1.0
+    created_at: str | None = None
+
+
+class BehaviorRequest(BaseModel):
+    events: list[BehaviorEvent] = Field(default_factory=list)
+    limit: int = 6
+
 
 class UserPreferences(BaseModel):
     budget_lakh: float
@@ -50,12 +75,14 @@ class UserPreferences(BaseModel):
     fast_charging_needed: bool
     brand_preference: str
     priority: str
+    behavior_events: list[BehaviorEvent] = Field(default_factory=list)
 
 def load_data():
-    try:
-        return pd.read_csv('data/ev_cars_features.csv')
-    except:
-        return pd.read_csv('../data/ev_cars_features.csv')
+    return load_feature_data()
+
+
+def dataframe_records(df):
+    return df.astype(object).where(pd.notnull(df), None).to_dict(orient="records")
 
 def parse_news_date(value):
     try:
@@ -138,7 +165,7 @@ def read_root():
 @app.get("/cars")
 def get_all_cars():
     df = load_data()
-    return {"cars": df.to_dict(orient="records")}
+    return {"cars": dataframe_records(df)}
 
 @app.get("/cars/{car_id}")
 def get_car(car_id: str):
@@ -146,7 +173,7 @@ def get_car(car_id: str):
     car = df[df['car_id'] == car_id]
     if len(car) == 0:
         raise HTTPException(status_code=404, detail="Car not found")
-    return car.to_dict(orient="records")[0]
+    return dataframe_records(car)[0]
 
 @app.get("/news")
 def get_news():
@@ -166,31 +193,89 @@ async def detect_ev_from_accelerometer(request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
+def car_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).lower().strip() in {"true", "yes", "1", "y"}
+
+
+def car_number(value, default=0):
+    try:
+        if pd.isna(value):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def car_text(value):
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return str(value) if value is not None else ""
+
+
+def recommendation_payload(car, rank, prefs=None, personalized=False):
+    match_percentage = int(car_number(car.get('final_score')) * 100)
+    if prefs:
+        reason, drawbacks = generate_explanation(car, prefs, match_percentage)
+    else:
+        reason, drawbacks = generate_market_explanation(car, personalized=personalized)
+
+    return {
+        "rank": rank,
+        "car_id": car_text(car.get('car_id')),
+        "car_name": car_text(car.get('car_name')),
+        "brand": car_text(car.get('brand')),
+        "model": car_text(car.get('model')),
+        "body_type": car_text(car.get('body_type')),
+        "price_lakh": car_number(car.get('price_on_road_lakh')),
+        "price_text": car_text(car.get('price_text')) or f"Rs {car_number(car.get('price_on_road_lakh')):.2f} Lakh",
+        "claimed_range_km": car_number(car.get('claimed_range_km')),
+        "real_world_range_km": car_number(car.get('real_world_range_km')),
+        "range_text": car_text(car.get('range_text')) or f"{car_number(car.get('claimed_range_km')):.0f} km",
+        "battery_capacity_kwh": car_number(car.get('battery_capacity_kwh')),
+        "battery_text": car_text(car.get('battery_text')) or f"{car_number(car.get('battery_capacity_kwh')):.1f} kWh",
+        "fast_charging_available": car_bool(car.get('fast_charging_available')),
+        "safety_rating": car_number(car.get('safety_rating'), 0),
+        "sales_latest_month": int(car_number(car.get('sales_latest_month'), 0)),
+        "popularity_score": round(car_number(car.get('popularity_score')), 3),
+        "match_percentage": match_percentage,
+        "reason": reason,
+        "drawbacks": drawbacks,
+        "image_url": car_text(car.get('image_url')),
+        "source_url": car_text(car.get('source_url')),
+        "status": car_text(car.get('status')),
+    }
+
+
+@app.post("/recommend/personalized")
+def recommend_from_behavior(payload: BehaviorRequest):
+    limit = min(max(payload.limit, 1), 12)
+    top_cars = get_default_recommendations(payload.events, limit=limit)
+    personalized = bool(payload.events)
+    return {
+        "mode": "personalized" if personalized else "popular",
+        "recommendations": [
+            recommendation_payload(car, rank, personalized=personalized)
+            for rank, (_, car) in enumerate(top_cars.iterrows(), start=1)
+        ],
+    }
+
+
 @app.post("/recommend")
 def recommend_cars(prefs: UserPreferences):
-    top_cars = get_recommendations(prefs)
+    top_cars = get_recommendations(prefs, behavior_events=prefs.behavior_events)
     
     if len(top_cars) == 0:
         return {"recommendations": []}
         
-    recommendations = []
-    rank = 1
-    for _, car in top_cars.iterrows():
-        match_percentage = int(car['final_score'] * 100)
-        reason, drawbacks = generate_explanation(car, prefs, match_percentage)
-        
-        rec = {
-            "rank": rank,
-            "car_name": car['car_name'],
-            "brand": car['brand'],
-            "price_lakh": car['price_on_road_lakh'],
-            "claimed_range_km": car['claimed_range_km'],
-            "battery_capacity_kwh": car['battery_capacity_kwh'],
-            "match_percentage": match_percentage,
-            "reason": reason,
-            "drawbacks": drawbacks
-        }
-        recommendations.append(rec)
-        rank += 1
+    recommendations = [
+        recommendation_payload(car, rank, prefs=prefs, personalized=bool(prefs.behavior_events))
+        for rank, (_, car) in enumerate(top_cars.iterrows(), start=1)
+    ]
         
     return {"recommendations": recommendations}

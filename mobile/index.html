@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0d1b2a" />
+    <meta name="theme-color" content="#10201b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="EV Finder" />
@@ -15,27 +15,56 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="top-panel">
-        <div>
-          <p class="eyebrow">India EV recommendations</p>
-          <h1>EV Finder</h1>
+      <header class="top-panel">
+        <div class="brand-lockup">
+          <span class="brand-mark">EV</span>
+          <div>
+            <p class="eyebrow">India EV marketplace</p>
+            <h1>EV Finder</h1>
+          </div>
         </div>
         <button class="install-button" id="installButton" type="button" hidden>Install</button>
-      </section>
+      </header>
 
       <section class="app-view active" data-view="explore">
-        <form class="preference-form" id="preferenceForm">
-          <div class="field-row">
-            <label for="budget">Budget</label>
-            <output id="budgetValue">15 L</output>
+        <section class="recommendation-shelf" aria-labelledby="personalizedTitle">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Before you search</p>
+              <h2 class="section-title" id="personalizedTitle">Recommended for you</h2>
+              <p class="section-subtitle" id="personalizedReason">Popular Indian EVs with strong value signals.</p>
+            </div>
+            <button class="secondary-button icon-button" id="refreshPersonalized" type="button" aria-label="Refresh recommendations">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.7 6.3A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.76-4.24L13 11h8V3l-3.3 3.3Z"/></svg>
+            </button>
           </div>
-          <input id="budget" name="budget_lakh" type="range" min="5" max="80" step="0.5" value="15" />
+          <div class="recommendation-grid" id="personalizedResults" aria-live="polite"></div>
+        </section>
 
-          <div class="field-row">
-            <label for="range">Minimum range</label>
-            <output id="rangeValue">250 km</output>
+        <form class="preference-form" id="preferenceForm">
+          <div class="form-head">
+            <div>
+              <p class="eyebrow">Preference search</p>
+              <h2 class="section-title">Fine-tune matches</h2>
+            </div>
+            <span class="market-badge" id="marketCount">Market data</span>
           </div>
-          <input id="range" name="minimum_range_km" type="range" min="100" max="600" step="10" value="250" />
+
+          <div class="range-field">
+            <div class="field-row">
+              <label for="budget">Budget</label>
+              <output id="budgetValue">15 L</output>
+            </div>
+            <input id="budget" name="budget_lakh" type="range" min="5" max="80" step="0.5" value="15" />
+          </div>
+
+          <div class="range-field">
+            <div class="field-row">
+              <label for="range">Minimum range</label>
+              <output id="rangeValue">250 km</output>
+            </div>
+            <input id="range" name="minimum_range_km" type="range" min="100" max="700" step="10" value="250" />
+          </div>
 
           <div class="grid two">
             <label>
@@ -75,19 +104,20 @@
           <div class="grid two">
             <label>
               Body type
-              <select name="preferred_body_type">
+              <select name="preferred_body_type" id="bodyPreference">
                 <option>Any</option>
                 <option>SUV</option>
                 <option>Hatchback</option>
                 <option>Sedan</option>
                 <option>Crossover</option>
-                <option>Compact SUV</option>
-                <option>Mid-size SUV</option>
+                <option>Compact</option>
+                <option>MUV/MPV</option>
+                <option>Coupe</option>
               </select>
             </label>
             <label>
               Brand
-              <select name="brand_preference">
+              <select name="brand_preference" id="brandPreference">
                 <option>Any</option>
                 <option>Tata</option>
                 <option>MG</option>
@@ -124,7 +154,10 @@
             </label>
           </div>
 
-          <button class="primary-button" type="submit">Find my EV</button>
+          <button class="primary-button" type="submit">
+            <span>Find my EV</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5 20 12l-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6L13 5Z"/></svg>
+          </button>
         </form>
 
         <section class="results" id="results" aria-live="polite"></section>
@@ -218,20 +251,31 @@
 
     <template id="resultTemplate">
       <article class="result-card">
-        <div class="result-head">
-          <div>
-            <p class="rank"></p>
-            <h2></h2>
+        <div class="car-media">
+          <img class="car-image" alt="" loading="lazy" />
+          <span class="status-pill"></span>
+        </div>
+        <div class="result-body">
+          <div class="result-head">
+            <div>
+              <p class="rank"></p>
+              <h2></h2>
+              <p class="body-meta"></p>
+            </div>
+            <strong class="match"></strong>
           </div>
-          <strong class="match"></strong>
+          <div class="metrics">
+            <span><small>From</small><strong class="price"></strong></span>
+            <span><small>Range</small><strong class="car-range"></strong></span>
+            <span><small>Battery</small><strong class="battery"></strong></span>
+          </div>
+          <p class="reason"></p>
+          <p class="drawbacks"></p>
+          <div class="card-actions">
+            <a class="details-link" target="_blank" rel="noopener noreferrer">View source</a>
+            <span class="sales"></span>
+          </div>
         </div>
-        <div class="metrics">
-          <span class="price"></span>
-          <span class="car-range"></span>
-          <span class="battery"></span>
-        </div>
-        <p class="reason"></p>
-        <p class="drawbacks"></p>
       </article>
     </template>
 

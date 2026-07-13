@@ -38,3 +38,19 @@
 | cons | String | Disadvantages and drawbacks of the car |
 | source_url | String | URL of the data source |
 | last_updated | String | Date of last data update |
+| status | String | Market availability status |
+| price_text | String | Human-readable source price range |
+| range_text | String | Human-readable source range |
+| battery_text | String | Human-readable source battery range |
+| charging_text | String | Charging text from source data |
+| useful_features | String | Extracted feature highlights from source data |
+| variants_count | Float | Number of variants listed by the source |
+| image_url | String | Model image URL used by mobile cards |
+| image_source_url | String | Source page for the image |
+| data_source | String | Name of the source used for this row |
+| data_collected_date | String | Date the source row was collected |
+| sales_latest_month | Float | Latest model-wise monthly sales, when known |
+| sales_previous_month | Float | Previous monthly sales, when known |
+| sales_3_months_ago | Float | Sales from three months ago, when known |
+| sales_data_month | String | Month represented by sales_latest_month |
+| sales_source | String | Source note for the sales data |
