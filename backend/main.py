@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import xml.etree.ElementTree as ET
 import pandas as pd
 import requests
@@ -39,6 +39,47 @@ NEWS_QUERIES = [
     "electric car India",
     "EV battery India",
 ]
+NEWS_FEEDS = [
+    {
+        "url": "https://evreporter.com/feed/",
+        "topic": "EV Reporter",
+        "filter_ev": False,
+    },
+    {
+        "url": "https://insideevs.com/rss/news/all/",
+        "topic": "InsideEVs",
+        "filter_ev": False,
+    },
+    {
+        "url": "https://www.carwale.com/news/feed/",
+        "topic": "CarWale EV news",
+        "filter_ev": True,
+    },
+    {
+        "url": "https://www.autocarindia.com/rss/news",
+        "topic": "Autocar India EV news",
+        "filter_ev": True,
+    },
+]
+EV_NEWS_KEYWORDS = (
+    "electric",
+    " ev ",
+    "evs",
+    "battery",
+    "charging",
+    "charger",
+    "plug in",
+    "zero emission",
+    "tata.ev",
+    "tata ev",
+    "mahindra xev",
+    "mahindra be",
+    "mg windsor",
+    "byd",
+    "tesla",
+    "ioniq",
+    "e tron",
+)
 NEWS_CACHE = {
     "expires_at": datetime.min.replace(tzinfo=timezone.utc),
     "payload": None,
@@ -100,42 +141,60 @@ def clean_google_news_title(title, source):
         return title[:-len(suffix)].strip()
     return title.strip()
 
-def fetch_news_feed(query):
-    feed_url = (
-        "https://news.google.com/rss/search?"
-        f"q={quote(query)}&hl=en-IN&gl=IN&ceid=IN:en"
-    )
-    response = requests.get(
-        feed_url,
-        headers={
-            "User-Agent": "Mozilla/5.0 EV-Recommender/1.0",
-            "Accept": "application/rss+xml, application/xml, text/xml, */*",
-        },
-        timeout=8,
-    )
+def news_headers():
+    return {
+        "User-Agent": "Mozilla/5.0 EV-Recommender/1.0",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    }
+
+def format_news_error(label, exc):
+    if isinstance(exc, requests.HTTPError) and exc.response is not None:
+        return f"{label}: HTTP {exc.response.status_code}"
+    return f"{label}: {type(exc).__name__}"
+
+def is_ev_news_item(title, description=""):
+    content = f" {title} {description} ".lower().replace("-", " ")
+    return any(keyword in content for keyword in EV_NEWS_KEYWORDS)
+
+def fetch_rss_articles(feed_url, topic, filter_ev=False):
+    response = requests.get(feed_url, headers=news_headers(), timeout=8)
     response.raise_for_status()
     root = ET.fromstring(response.content)
+
+    channel_title = root.findtext("./channel/title", default="").strip()
+    fallback_source = channel_title or urlparse(feed_url).netloc.replace("www.", "")
 
     articles = []
     for item in root.findall("./channel/item"):
         title = item.findtext("title", default="").strip()
         link = item.findtext("link", default="").strip()
-        source = item.findtext("source", default="").strip()
+        source = item.findtext("source", default="").strip() or fallback_source
+        description = item.findtext("description", default="").strip()
         published_raw = item.findtext("pubDate", default="")
         published_at = parse_news_date(published_raw)
 
         if not title or not link:
             continue
 
+        if filter_ev and not is_ev_news_item(title, description):
+            continue
+
         articles.append({
             "title": clean_google_news_title(title, source),
-            "source": source or "Google News",
+            "source": source,
             "url": link,
             "published_at": published_at.isoformat(),
-            "topic": query,
+            "topic": topic,
         })
 
     return articles
+
+def fetch_news_feed(query):
+    feed_url = (
+        "https://news.google.com/rss/search?"
+        f"q={quote(query)}&hl=en-IN&gl=IN&ceid=IN:en"
+    )
+    return fetch_rss_articles(feed_url, query)
 
 def get_ev_news(limit=12):
     now = datetime.now(timezone.utc)
@@ -151,7 +210,17 @@ def get_ev_news(limit=12):
                 if key not in articles_by_title:
                     articles_by_title[key] = article
         except Exception as exc:
-            errors.append(f"{query}: {type(exc).__name__}")
+            errors.append(format_news_error(query, exc))
+            continue
+
+    for feed in NEWS_FEEDS:
+        try:
+            for article in fetch_rss_articles(feed["url"], feed["topic"], feed["filter_ev"]):
+                key = article["title"].lower()
+                if key not in articles_by_title:
+                    articles_by_title[key] = article
+        except Exception as exc:
+            errors.append(format_news_error(feed["topic"], exc))
             continue
 
     articles = sorted(
