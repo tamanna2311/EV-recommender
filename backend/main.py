@@ -42,6 +42,7 @@ NEWS_QUERIES = [
 NEWS_CACHE = {
     "expires_at": datetime.min.replace(tzinfo=timezone.utc),
     "payload": None,
+    "last_error": "",
 }
 
 class BehaviorEvent(BaseModel):
@@ -104,7 +105,14 @@ def fetch_news_feed(query):
         "https://news.google.com/rss/search?"
         f"q={quote(query)}&hl=en-IN&gl=IN&ceid=IN:en"
     )
-    response = requests.get(feed_url, headers={"User-Agent": "EV-Recommender/1.0"}, timeout=8)
+    response = requests.get(
+        feed_url,
+        headers={
+            "User-Agent": "Mozilla/5.0 EV-Recommender/1.0",
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        },
+        timeout=8,
+    )
     response.raise_for_status()
     root = ET.fromstring(response.content)
 
@@ -131,17 +139,19 @@ def fetch_news_feed(query):
 
 def get_ev_news(limit=12):
     now = datetime.now(timezone.utc)
-    if NEWS_CACHE["payload"] and NEWS_CACHE["expires_at"] > now:
+    if NEWS_CACHE["payload"] and NEWS_CACHE["expires_at"] > now and NEWS_CACHE["payload"].get("articles"):
         return NEWS_CACHE["payload"]
 
     articles_by_title = {}
+    errors = []
     for query in NEWS_QUERIES:
         try:
             for article in fetch_news_feed(query):
                 key = article["title"].lower()
                 if key not in articles_by_title:
                     articles_by_title[key] = article
-        except Exception:
+        except Exception as exc:
+            errors.append(f"{query}: {type(exc).__name__}")
             continue
 
     articles = sorted(
@@ -150,12 +160,27 @@ def get_ev_news(limit=12):
         reverse=True,
     )[:limit]
 
+    if not articles:
+        NEWS_CACHE["last_error"] = "; ".join(errors)
+        if NEWS_CACHE["payload"] and NEWS_CACHE["payload"].get("articles"):
+            stale_payload = dict(NEWS_CACHE["payload"])
+            stale_payload["stale"] = True
+            stale_payload["updated_at"] = now.isoformat()
+            return stale_payload
+        return {
+            "articles": [],
+            "updated_at": now.isoformat(),
+            "error": NEWS_CACHE["last_error"],
+        }
+
     payload = {
         "articles": articles,
         "updated_at": now.isoformat(),
+        "stale": False,
     }
     NEWS_CACHE["payload"] = payload
     NEWS_CACHE["expires_at"] = now + timedelta(minutes=15)
+    NEWS_CACHE["last_error"] = ""
     return payload
 
 @app.get("/")
